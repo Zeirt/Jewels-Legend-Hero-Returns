@@ -1,4 +1,5 @@
 #ifndef GAME_DATA_STRUCTS
+#define GAME_DATA_STRUCTS
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -11,6 +12,7 @@ enum jewels{BLUE = 1, RED = 2, ORANGE = 3, GREEN = 4, BROWN = 5, YELLOW = 6, BLA
 	EN: Table struct. It contains information regarding current game status, as well as a variety of functions to help handle it.
 	ES: Struct de Table. Contiene información referente al estado actual del juego, además de múltiples funciones para ayudar a manejarlo.
 */
+
 typedef struct{
 	int width, height, stride;
 	int* elements;
@@ -106,7 +108,7 @@ typedef struct{
 	*/
 	void recreateRegion(int startRow, int startCol, int rWidth, int rHeight)
 	{
-		Table region = getSubtable(startRow, startCol, rWidth, rHeight);
+		Table region = getSubTable(startRow, startCol, rWidth, rHeight);
 		region.randomize();
 	}
 	

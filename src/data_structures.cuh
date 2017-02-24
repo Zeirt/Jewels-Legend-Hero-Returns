@@ -13,7 +13,7 @@ enum jewels{BLUE = 1, RED = 2, ORANGE = 3, GREEN = 4, BROWN = 5, YELLOW = 6, BLA
 	ES: Struct de Table. Contiene información referente al estado actual del juego, además de múltiples funciones para ayudar a manejarlo.
 */
 
-typedef struct{
+typedef struct table_t{
 	int width, height, stride;
 	int* elements;
 	
@@ -72,7 +72,7 @@ typedef struct{
 		width = tWidth;
 		height = tHeight;
 		stride = width;
-		cudaMalloc(elements, width*height*sizeof(int));
+		cudaMalloc(&elements, width*height*sizeof(int));
 	}
 	
 	/*
@@ -93,9 +93,9 @@ typedef struct{
 		EN: Retrieves a given subtable of region of the table.
 		ES: Recupera un subtablero o region dada del tablero. 
 	*/
-	Table getSubTable(int startRow, int startCol, int sWidth, int sHeight)
+	struct table_t getSubTable(int startRow, int startCol, int sWidth, int sHeight)
 	{
-		Table newTable;
+		struct table_t newTable;
 		newTable.initialize(sWidth, sHeight);
 		free(newTable.elements);
 		newTable.elements = &(elements[startRow*stride+startCol]);

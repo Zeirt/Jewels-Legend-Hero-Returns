@@ -89,16 +89,16 @@ bool move(int row, int col, moves_t move, Table table)
 	switch(move)
 	{
 	case UP:
-		index1 = (row-1)*table+col;
+		index1 = (row-1)*table.stride+col;
 		break;
 	case DOWN:
-		index1 = (row+1)*table+col;
+		index1 = (row+1)*table.stride+col;
 		break;
 	case LEFT:
-		index1 = row*table+(col-1);
+		index1 = row*table.stride+(col-1);
 		break;
 	case RIGHT:
-		index1 = row*table+(col+1);
+		index1 = row*table.stride+(col+1);
 		break;
 	}
 	swapElements(&(table.elements[index0]), &(table.elements[index1]));
@@ -118,16 +118,16 @@ __device__ bool deviceMove(int row, int col, moves_t move, Table table)
 	switch(move)
 	{
 	case UP:
-		index1 = (row-1)*table+col;
+		index1 = (row-1)*table.stride+col;
 		break;
 	case DOWN:
-		index1 = (row+1)*table+col;
+		index1 = (row+1)*table.stride+col;
 		break;
 	case LEFT:
-		index1 = row*table+(col-1);
+		index1 = row*table.stride+(col-1);
 		break;
 	case RIGHT:
-		index1 = row*table+(col+1);
+		index1 = row*table.stride+(col+1);
 		break;
 	}
 	deviceSwapElements(&(table.elements[index0]), &(table.elements[index1]));

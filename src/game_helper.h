@@ -1,6 +1,6 @@
 ﻿#ifndef GAME_HELPER_H
 #define GAME_HELPER_H
-#include <stdbool.h>
+
 #include "data_structures.cuh"
 
 /*

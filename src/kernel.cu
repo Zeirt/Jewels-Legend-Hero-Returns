@@ -1,4 +1,5 @@
 #include "data_structures.cuh"
+#include "save_helper.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -37,6 +38,27 @@ int main(int argc, char* args[])
 	}
 	//PRUEBA DE ARGUMENTOS. IMPRIMIMOS
 	printf("Mode: %s\nWidth:%d\nHeight:%d\n", args[1], width, height);
-	system("PAUSE");
-	return 0;
+	//PRUEBA DE ESCRITURA Y LECTURA
+	bool success;
+	char* placeholder = "hella";
+	success = saveData(width, height, isManual, placeholder);
+	if (success) printf("Escritura de fichero correcta\n");
+	else {
+		printf("Ha fallado la escritura del fichero\n");
+		system("PAUSE");
+		return 1;
+	}
+	success = loadData(&width, &height, &isManual, placeholder);
+	if (success) {
+		printf("Escritura de fichero correcta\n");
+		printf("Mode: %s\nWidth:%d\nHeight:%d\n", args[1], width, height);
+		printf("Table string; %s", &placeholder);
+		system("PAUSE");
+		return 0;
+	}
+	else {
+		printf("Ha fallado la lectura del fichero\n");
+		system("PAUSE");
+		return 1;
+	}
 }

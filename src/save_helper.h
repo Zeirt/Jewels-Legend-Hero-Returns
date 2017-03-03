@@ -8,7 +8,7 @@
 	ES: Definicion de funciones de persistencia de datos. Se proveeran explicaciones en el archivo de implementacion.
 */
 
-bool saveData(int width, int height, bool isManual, char* table);
-bool loadData(int* width, int* height, bool* isManual, char* table);
+bool saveData(int width, int height, bool isManual, int difficulty, char* table);
+bool loadData(int* width, int* height, bool* isManual, int* difficulty, char* table);
 
 #endif

@@ -14,7 +14,7 @@ enum jewels{BLUE = 1, RED = 2, ORANGE = 3, GREEN = 4, BROWN = 5, YELLOW = 6, BLA
 */
 
 typedef struct table_t{
-	int width, height, stride;
+	int width, height, stride, difficulty;
 	int* elements;
 	
 	/*
@@ -39,15 +39,27 @@ typedef struct table_t{
 		EN: Creates a random table status; used when initializing.
 		ES: Crea un estado de tablero aleatorio. Usado cuando se inicializa.
 	*/
-	void randomize()
+	void randomize(int gDifficulty)
 	{
 		for(int i=0; i<height; i++)
 		{
 			for(int j=0; j<width; j++)
 			{
-				setElement(1+rand()%7, i, j);
+				switch(difficulty)
+				{	
+				case 1:
+					setElement(1+rand()%4, i, j);
+					break;
+				case 2:
+					setElement(1+rand()%6, i, j);
+					break;
+				case 3:
+					setElement(1+rand()%8, i, j);
+					break;
+				}
 			}
 		}
+		difficulty = gDifficulty;
 	}
 	
 	/*

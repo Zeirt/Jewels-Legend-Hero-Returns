@@ -66,11 +66,12 @@ typedef struct table_t{
 		EN: Creates a new empty table with the established width and height.
 		ES: Crea un nuevo tablero con la anchura y altura establecidos.
 	*/
-	void initialize(int tWidth, int tHeight, int difficulty)
+	void initialize(int tWidth, int tHeight, int tDifficulty)
 	{
 		width = tWidth;
 		height = tHeight;
 		stride = width;
+		difficulty = tDifficulty;
 		elements = (int*)calloc(width*height, sizeof(int));
 		//randomize(difficulty);
 	}
@@ -79,11 +80,12 @@ typedef struct table_t{
 		EN: Allocates memory for the table in the target device.
 		ES: Asigna memoria al tablero en el dispositivo.
 	*/
-	void deviceInitialize(int tWidth, int tHeight)
+	void deviceInitialize(int tWidth, int tHeight, int tDifficulty)
 	{
 		width = tWidth;
 		height = tHeight;
 		stride = width;
+		difficulty = tDifficulty;
 		cudaMalloc(&elements, width*height*sizeof(int));
 	}
 	
@@ -108,7 +110,7 @@ typedef struct table_t{
 	struct table_t getSubTable(int startRow, int startCol, int sWidth, int sHeight)
 	{
 		struct table_t newTable;
-		newTable.initialize(sWidth, sHeight);
+		newTable.initialize(sWidth, sHeight, difficulty);
 		free(newTable.elements);
 		newTable.elements = &(elements[startRow*stride+startCol]);
 		return newTable;

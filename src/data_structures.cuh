@@ -66,13 +66,13 @@ typedef struct table_t{
 		EN: Creates a new empty table with the established width and height.
 		ES: Crea un nuevo tablero con la anchura y altura establecidos.
 	*/
-	void initialize(int tWidth, int tHeight)
+	void initialize(int tWidth, int tHeight, int difficulty)
 	{
 		width = tWidth;
 		height = tHeight;
 		stride = width;
 		elements = (int*)calloc(width*height, sizeof(int));
-		randomize();
+		//randomize(difficulty);
 	}
 	
 	/*
@@ -121,7 +121,7 @@ typedef struct table_t{
 	void recreateRegion(int startRow, int startCol, int rWidth, int rHeight)
 	{
 		Table region = getSubTable(startRow, startCol, rWidth, rHeight);
-		region.randomize();
+		region.randomize(difficulty);
 	}
 	
 	/*

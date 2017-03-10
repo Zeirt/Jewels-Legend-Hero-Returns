@@ -25,12 +25,30 @@ typedef struct table_t{
 	{
 		elements[row*stride+col] = value;
 	}
+
+	/*
+		EN: Sets the value of the specified element.
+		ES: Establece el valor del elemento especificado.
+	*/
+	__device__ void setElementDevice(int value, int row, int col)
+	{
+		elements[row*stride+col] = value;
+	}
 	
 	/*
 		EN: Retrieves the value of the specified element.
 		ES: Recupera el valor del elemento especificado.
 	*/
 	int getElement(int row, int col)
+	{
+		return elements[row*stride+col];
+	}
+
+	/*
+		EN: Retrieves the value of the specified element.
+		ES: Recupera el valor del elemento especificado.
+	*/
+	__device__ int getElementDevice(int row, int col)
 	{
 		return elements[row*stride+col];
 	}

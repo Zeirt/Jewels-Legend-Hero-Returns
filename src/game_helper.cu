@@ -133,3 +133,203 @@ __device__ bool deviceMove(int row, int col, moves_t move, Table table)
 	deviceSwapElements(&(table.elements[index0]), &(table.elements[index1]));
 	return true;
 }
+
+/*
+	EN: Determines if a rotation with center (col, row) is valid.
+	ES: Determina si una rotación con centro (col, row) es válida.
+*/
+bool rotationIsValid(int row, int col, Table table)
+{
+	if(row <= 0 || row >= table.height || col <= 0 || col >= table.width)
+		return false;
+	return true;
+}
+
+/*
+	EN: Checks if a rotation in valid, and if it is, it goes on and rotates the jewels.
+	ES: Comprueba si la rotación es válida, y si lo es, pasa a rotar las joyas.
+*/
+bool rotate(int row, int col, Table table)
+{
+	if(rotationIsValid(row, col, table))
+	{
+		int leftUpMostCorner = table.getElement(row-1, col-1);
+		int centerUpMostSpot = table.getElement(row-1, col);
+		table.setElement(table.getElement(row+1, col-1), row-1, col-1);
+		table.setElement(table.getElement(row+1, col+1), row+1, col-1);
+		table.setElement(table.getElement(row-1, col+1), row+1, col+1);
+		table.setElement(leftUpMostCorner, row-1, col+1);
+		table.setElement(table.getElement(row-1, col), row, col-1);
+		table.setElement(table.getElement(row, col-1), row+1, col);
+		table.setElement(table.getElement(row+1, col), row, col+1);
+		table.setElement(centerUpMostSpot, row+1, col);
+		return true;
+	}
+	return false;
+}
+
+/*
+	EN: Returns the relative position between two points of the table. 
+	curRow: current row, which is being used as a basis for the check.
+	curCol: current column, which is being used as a basis for the check.
+	row: reference row, which is being used as a basis for rotation.
+	col: reference column, which is being used as a basis for rotation.
+	ES: Devuelve la posición relativa entre dos puntos del tablero.
+	curRow: fila actual, usada como base para la comprobación.
+	curCol: columna actual, usada como base para la comprobación.
+	row: fila de referencia, que se usará como base para la rotación.
+	col: columna de referencia, que se usará como base para la rotación.
+*/
+__device__ int getRelativePosition(int curRow, int curCol, int row, int col)
+{
+	int xDistance = curCol - col;
+	int yDistance = curRow - row;
+	if(xDistance == -1 && yDistance == -1)
+		return 0;
+	if(xDistance == 0 && yDistance == -1)
+		return 1;
+	if(xDistance == 1 && yDistance == -1)
+		return 2;
+	if(xDistance == 1 && yDistance == 0)
+		return 3;
+	if(xDistance == 1 && yDistance == 1)
+		return 4;
+	if(xDistance == 0 && yDistance == 1)
+		return 5;
+	if(xDistance == -1 && yDistance == 1)
+		return 6;
+	if(xDistance == -1 && yDistance == 0)
+		return 7;
+	if(xDistance == 0 && yDistance == 0)
+		return 8;
+	return -1;
+}
+
+/*
+	EN: Rotates the 3x3 subtable centered in (col, row). First, if check if the rotation is valid,
+	then determines which point is being handled by the current thread and makes the appropriate changes.
+	ES: Rota un subtablero de 3x3, centrado en (col, row). Primero, comprueba si la rotación es válida,
+	entonces determina qué punto está siendo manejado por el hilo actual y hace los cambios apropiados.
+*/
+__device__ bool rotateDeviceGlobal(int row, int col, Table table)
+{
+	int curRow = threadIdx.y, curCol = threadIdx.x;
+	int relPos = getRelativePosition(curRow, curCol, row, col);
+	int newVal;
+	switch(relPos)
+	{
+	case 0:
+		newVal = table.getElementDevice(curRow, curCol+2);
+		break;
+	case 2:
+		newVal = table.getElementDevice(curRow+1, curCol+1);
+		break;
+	case 3:
+		newVal = table.getElementDevice(curRow+2, curCol);
+		break;
+	case 4:
+		newVal = table.getElementDevice(curRow+1, curCol-1);
+		break;
+	case 5:
+		newVal = table.getElementDevice(curRow, curCol-2);
+		break;
+	case 6:
+		newVal = table.getElementDevice(curRow-1, curCol-1);
+		break;
+	case 7:
+		newVal = table.getElementDevice(curRow-2, curCol);
+		break;
+	case 8:
+		newVal = table.getElementDevice(curRow-1, curCol+1);
+		break;
+	}
+	__syncthreads();
+	table.setElementDevice(newVal, curRow, curCol);
+	return true;
+}
+
+/*
+	EN: Rotates the 3x3 subtable centered in (col, row). First, if check if the rotation is valid,
+	then determines which point is being handled by the current thread and makes the appropriate changes.
+	ES: Rota un subtablero de 3x3, centrado en (col, row). Primero, comprueba si la rotación es válida,
+	entonces determina qué punto está siendo manejado por el hilo actual y hace los cambios apropiados.
+*/
+__device__ bool rotateDeviceBlock(int row, int col, Table table)
+{
+	int curRow = blockIdx.y*blockDim.y+threadIdx.y, curCol = blockIdx.x*blockDim.x+threadIdx.x;
+	int relPos = getRelativePosition(curRow, curCol, row, col);
+	int newVal;
+	switch(relPos)
+	{
+	case 0:
+		newVal = table.getElementDevice(curRow, curCol+2);
+		break;
+	case 2:
+		newVal = table.getElementDevice(curRow+1, curCol+1);
+		break;
+	case 3:
+		newVal = table.getElementDevice(curRow+2, curCol);
+		break;
+	case 4:
+		newVal = table.getElementDevice(curRow+1, curCol-1);
+		break;
+	case 5:
+		newVal = table.getElementDevice(curRow, curCol-2);
+		break;
+	case 6:
+		newVal = table.getElementDevice(curRow-1, curCol-1);
+		break;
+	case 7:
+		newVal = table.getElementDevice(curRow-2, curCol);
+		break;
+	case 8:
+		newVal = table.getElementDevice(curRow-1, curCol+1);
+		break;
+	}
+	__syncthreads();
+	table.setElementDevice(newVal, curRow, curCol);
+	return true;
+}
+
+/*
+	EN: Rotates the 3x3 subtable centered in (col, row). First, if check if the rotation is valid,
+	then determines which point is being handled by the current thread and makes the appropriate changes.
+	ES: Rota un subtablero de 3x3, centrado en (col, row). Primero, comprueba si la rotación es válida,
+	entonces determina qué punto está siendo manejado por el hilo actual y hace los cambios apropiados.
+*/
+__device__ int rotateDeviceShared(int row, int col, Table table)
+{
+	int curRow = blockIdx.y*blockDim.y+threadIdx.y, curCol = blockIdx.x*blockDim.x+threadIdx.x;
+	int relPos = getRelativePosition(curRow, curCol, row, col);
+	int newVal;
+	switch(relPos)
+	{
+	case 0:
+		newVal = table.getElementDevice(curRow, curCol+2);
+		break;
+	case 2:
+		newVal = table.getElementDevice(curRow+1, curCol+1);
+		break;
+	case 3:
+		newVal = table.getElementDevice(curRow+2, curCol);
+		break;
+	case 4:
+		newVal = table.getElementDevice(curRow+1, curCol-1);
+		break;
+	case 5:
+		newVal = table.getElementDevice(curRow, curCol-2);
+		break;
+	case 6:
+		newVal = table.getElementDevice(curRow-1, curCol-1);
+		break;
+	case 7:
+		newVal = table.getElementDevice(curRow-2, curCol);
+		break;
+	case 8:
+		newVal = table.getElementDevice(curRow-1, curCol+1);
+		break;
+	}
+	__syncthreads();
+	table.setElementDevice(newVal, curRow, curCol);
+	return true;
+}

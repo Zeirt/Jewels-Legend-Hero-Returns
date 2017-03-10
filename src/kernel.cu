@@ -77,8 +77,8 @@ int main(int argc, char* args[])
 	exit = false;
 	Table table;
 	char* bufferTabla;
-	table.initialize(width, height); //We initialize the table and then load the data if possible
-	table.deviceInitialize(width, height);
+	table.initialize(width, height, difficulty); //We initialize the table and then load the data if possible
+	table.deviceInitialize(width, height, difficulty);
 	dataSuccess = loadData(&width, &height, &isManual, &difficulty, bufferTabla);
 	if (dataSuccess) {
 		printf("Se ha cargado la partida anterior.\n");
@@ -88,20 +88,73 @@ int main(int argc, char* args[])
 		printf("No se ha podido cargar la partida anterior. Empezando una nueva.\n");
 		//TODO: When new initialize is created, launch it
 	}
-	int inputInt;
+	int inputInt, inputInt2;
 	char* bufferInput;
+	char *pEnd;
 	//Two different kinds of play. Select one or another depending on mode chosen (manual or auto)
-	if (isManual) {
+	if (isManual) { //Manual play
 		while (!exit) {
 			table.print();
 			//TODO: Add elimination of lines when it's implemented (as much as they can)
-			scanf("%d", bufferInput);
-			//TODO: Parse input to decide what the user asked for
+			scanf("%s", &bufferInput);
+			//Parse input: if asked for a bomb
+			if (strcmp("9",bufferInput)==0){
+				fflush(stdin);
+				scanf("%s", bufferInput);
+				printf("\nHas pedido una bomba. Inserta tipo (1,2,3)\n");
+				//Get bomb type
+				if ((strcmp("1", bufferInput)==0) || (strcmp("2", bufferInput)==0) || (strcmp("3", bufferInput)==0)) {
+					inputInt = (int)strtol(bufferInput, &pEnd, 10);
+					switch (inputInt) {
+					case 1: //Bomb asking for col
+						fflush(stdin);
+						scanf("%s", &bufferInput);
+						inputInt2 = (int)strtol(bufferInput, &pEnd, 10);
+						//Summon bomb
+						break;
+					case 2: //Bomb asking for row
+						fflush(stdin);
+						scanf("%s", &bufferInput);
+						inputInt2 = (int)strtol(bufferInput, &pEnd, 10);
+						break;
+					default: //Swap bomb
+						//Summon bomb
+						break;
+					}
+				}
+				else {
+					printf("OWO waoaowoa"); //failure placeholder
+				}
+			}//Parse input: not a bomb
+			else {
+				inputInt = (int)strtol(bufferInput, &pEnd, 10);
+				if (inputInt == 0) {
+					//inputInt is col, inputInt2 is row
+					fflush(stdin);
+					scanf("%s", &bufferInput);
+					inputInt2 = (int)strtol(bufferInput, &pEnd, 10);
+					if (inputInt2 == 0) {
+						//Call exchange
+					}
+					else {
+						printf("OWO waoaowoa"); //failure placeholder
+					}
+				}
+				else { //Not a number. Are you exiting?
+					if (strcmp("q", bufferInput) == 0) {
+						exit = true;
+					}
+					else {
+						printf("OWO waoaowoa"); //failure placeholder
+					}
+				}
+			}
+			//saveData(width, height, isManual, difficulty, table);
 		}
 	}
-	else {
+	else { //Auto play
 		while (!exit) {
-
+			//Function autoplay
 		}
 	}
 }

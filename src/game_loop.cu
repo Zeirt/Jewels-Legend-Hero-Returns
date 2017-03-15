@@ -1,4 +1,4 @@
-#include "data_structures.cuh"
+﻿#include "data_structures.cuh"
 #include "game_helper.h"
 #include "save_helper.h"
 
@@ -68,14 +68,24 @@ bool gameInputParser(bool *exit, Table *table) {
 				scanf("%s", &bufferInput);
 				inputInt2 = (int)strtol(bufferInput, &pEnd, 10);
 				//Summon bomb
+				eraseCol(0, inputInt2, table->height, *table);
 				break;
 			case 2: //Bomb asking for row
 				fflush(stdin);
 				scanf("%s", &bufferInput);
 				inputInt2 = (int)strtol(bufferInput, &pEnd, 10);
+				eraseRow(inputInt2, 0, table->width, *table);
 				break;
 			default: //Swap bomb
 					 //Summon bomb
+				int w = table->width/3, h=table->height/3;
+				for(int i=0; i<h; i += 3)
+				{
+					for(int j=0; j<w; j+=3)
+					{
+						rotate(i+1, j+1, *table);
+					}
+				}
 				break;
 			}
 		}
@@ -86,13 +96,33 @@ bool gameInputParser(bool *exit, Table *table) {
 	}//Parse input: not a bomb
 	else {
 		inputInt = (int)strtol(bufferInput, &pEnd, 10);
-		if (inputInt == 0) {
+		if (inputInt != 0) {
 			//inputInt is col, inputInt2 is row
 			fflush(stdin);
 			scanf("%s", &bufferInput);
 			inputInt2 = (int)strtol(bufferInput, &pEnd, 10);
-			if (inputInt2 == 0) {
+			if (inputInt2 != 0) {
 				//Call exchange
+				printf("\nSeleccione movimiento:\n\t1. ARRIBA\n\t2.ABAJO\n\t3.IZQUIERDA\n\t4.DERECHA\n");
+				int movement = -1;
+				scanf("%i", &movement);
+				switch(movement)
+				{
+				case 1:
+					move(inputInt2, inputInt, UP, *table);
+					break;
+				case 2:
+					move(inputInt2, inputInt, DOWN, *table);
+					break;
+				case 3:
+					move(inputInt2, inputInt, LEFT, *table);
+					break;
+				case 4:
+					move(inputInt2, inputInt, RIGHT, *table);
+					break;
+				default: printf("Movimiento inválido. Prueba otra vez.\n");
+					return false;
+				}
 			}
 			else {
 				printf("Comando incorrecto. Prueba otra vez.\n");

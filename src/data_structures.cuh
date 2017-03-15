@@ -161,6 +161,44 @@ typedef struct table_t{
 	{
 		cudaFree(elements);
 	}
+
+	/*
+		EN: Creates a string with the status of the game.
+		ES: Crea una cadena de caracteres con el estado del juego.
+	*/
+	void createSaveString(char* save, bool isManual)
+	{
+		save[0] = width;
+		save[1] = height;
+		save[2] = difficulty;
+		save[3] = isManual;
+		for(int i=0; i<height; i++)
+		{
+			for(int j=0; j<width; j++)
+			{
+				save[i*width+j+4] = elements[i*width+j];
+			}
+		}
+	}
+
+	/*
+		EN: Loads the game from a string.
+		ES: Carga el juego desde una string.
+	*/
+	bool loadSaveString(char* load)
+	{
+		width = load[0];
+		height = load[1];
+		difficulty = load[2];
+		for(int i=0; i<height; i++)
+		{
+			for(int j=0; j<width; j++)
+			{
+				elements[i*width+j] = load[i*width+j+4];
+			}
+		}
+		return load[3];
+	}
 } Table;
 
 #endif

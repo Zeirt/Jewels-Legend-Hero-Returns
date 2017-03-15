@@ -373,7 +373,14 @@ void eraseCol(int startRow, int startCol, int length, Table t)
 	t.recreateRegion(startRow, startCol, 1, length);
 }
 
-__device__ void eraseRowDevice(int startRow, int startCol, int length, Table t)
+/*
+	EN: Function in charge of erasing a set of elements in a row in GPU. It moves them up, 
+	effectively dragging everything above them down, and then randomizes that set of elements.
+	ES: Función encargada de eliminar un grupo de elementos dispuestos en forma de fila en GPU.
+	En primer lugar los desplaza ascendentemente, hacienedo bajar todo lo que haya sobre ellos,
+	y entonces genera valores aleatorios para sustituir los actuales.
+*/
+__global__ void eraseRowDevice(int startRow, int startCol, int length, Table t)
 {
 	int row = threadIdx.y, col = threadIdx.x;
 	if(row != startRow || col < startCol || col > startCol+length) __syncthreads();
@@ -385,7 +392,15 @@ __device__ void eraseRowDevice(int startRow, int startCol, int length, Table t)
 	}
 }
 
-__device__ void eraseColDevice(int startRow, int startCol, int length, Table t)
+/*
+	EN: Function in charge of erasing a set of elements in a column in GPU. It moves them left,
+	effectively dragging those in the positions they now occupy to the right, and then randomizes
+	that set of elements.
+	ES: Función encargada de eliminar un grupo de elementos dispuestos en forma de columna en GPU.
+	En primer lugar desplaza los elementos hacia la izquierda, efectivamente arrastrando los elementos
+	en las posiciones que ahora ocupan hacia la derecha, y entonces recrea esa región con valores aleatorios.
+*/
+__global__ void eraseColDevice(int startRow, int startCol, int length, Table t)
 {
 	int row = threadIdx.y, col = threadIdx.x;
 	if(col != startCol || row < startRow || row > startRow+length) __syncthreads();
@@ -399,6 +414,7 @@ __device__ void eraseColDevice(int startRow, int startCol, int length, Table t)
 
 /*
 	EN: Detects what rows and columns should be eliminated.
+	ES: Detecta las filas y columnas a eliminar.
 */
 void detectEliminationPattern(Table t, int row, int col, int storage[6])
 {
@@ -434,21 +450,160 @@ void detectEliminationPattern(Table t, int row, int col, int storage[6])
 	storage[5] = count;
 }
 
-__device__ void detectEliminationPatternDevice(Table t, int lengths[2])
+/*
+	EN: Detects if a given point of the matrix should be eliminated and marks it as such.
+	ES: Detecta si un punto de la matriz debe ser eliminado y lo marca como tal.
+*/
+__global__ void detectEliminationPatternDevice(Table t, bool* elimination)
 {
 	int count = 0;
 	int row = threadIdx.y, col = threadIdx.x;
 	for(int i=col; i<t.width-1; i++)
 	{
-		if(t.getElement(row, i) != t.getElement(row, i+1)) break;
+		if(t.getElementDevice(row, i) != t.getElementDevice(row, i+1)) break;
 		count++;
+		if(count>= 3)
+		{
+			elimination[row*t.width+i] = true;
+			elimination[row*t.width+col] = true;
+		}
 	}
-	lengths[0] = count;
 	count = 0;
 	for(int i=row; i<t.height-1; i++)
 	{
-		if(t.getElement(i, col) != t.getElement(i+1, col)) break;
+		if(t.getElementDevice(i, col) != t.getElementDevice(i+1, col)) break;
 		count++;
+		if(count>= 3)
+		{
+			elimination[i*t.width+col] = true;
+			elimination[row*t.width+col] = true;
+		}
 	}
-	lengths[1] = count;
+}
+
+/*
+	EN: Determines, using (row, col) as a base, what points should be eliminated.
+	ES: Determina, usando (row, col) como base, qué puntos deben ser eliminados.
+*/
+void seekAndDestroy(Table t, int row, int col)
+{
+	int eliminations[6];
+	eliminations[0] = eliminations[1] = eliminations[3] = eliminations[4] = -1;
+	detectEliminationPattern(t, row, col, eliminations);
+	if(eliminations[0] > -1 && eliminations[1] > -1 && eliminations[2] > 0)
+	{
+		eraseRow(eliminations[0], eliminations[1], eliminations[2], t);
+	}
+
+	if(eliminations[3] > -1 && eliminations[4] > -1 && eliminations[5] > 0)
+	{
+		eraseCol(eliminations[3], eliminations[4], eliminations[5], t);
+	}
+}
+
+/*
+	EN: Determines, using (row, col) as a base, what points should be eliminated using GPU.
+	ES: Determina, usando (row, col) como base, qué puntos deben ser eliminados usando GPU.
+*/
+void seekAndDestroyDevice(Table t, int row, int col)
+{
+	dim3 dimGrid(1,1);
+	dim3 dimBlock(t.width, t.height);
+	Table deviceCopy;
+	deviceCopy.deviceInitialize(t.width, t.height, t.difficulty);
+	cudaMemcpy(deviceCopy.elements, t.elements, t.width*t.height*sizeof(int), cudaMemcpyHostToDevice);
+	bool* eliminationsDevice;
+	cudaMalloc(&eliminationsDevice, t.width*t.height*sizeof(bool));
+	detectEliminationPatternDevice<<<dimGrid, dimBlock>>>(deviceCopy, eliminationsDevice);
+	bool* eliminations = (bool*) malloc(t.width*t.height*sizeof(bool));
+	cudaMemcpy(eliminations, eliminationsDevice, t.width*t.height*sizeof(bool), cudaMemcpyDeviceToHost);
+	cudaFree(eliminationsDevice);
+	if(eliminations[row*t.width+col])
+	{
+		int lX=0, lY=0, baseXrow = row, baseYcol = col;
+		for(int i=0; i<t.width; i++)
+		{
+			if(!eliminations[row*t.width+i] && i>col) break;
+			else{
+				lX = 0;
+				continue;
+			}
+			if(i<baseXrow) baseXrow = i;
+			lX++;
+		}
+		for(int i=0; i<t.height; i++)
+		{
+			if(!eliminations[i*t.width+col]) break;
+			else {
+				lY = 0;
+				continue;
+			}
+			if(i < baseYcol) baseYcol = i;
+			lY++;
+		}
+		eraseRowDevice<<<dimGrid, dimBlock>>>(row, baseXrow, lX, deviceCopy);
+		eraseColDevice<<<dimGrid, dimBlock>>>(baseYcol, row, lY, deviceCopy);
+		cudaMemcpy(t.elements, deviceCopy.elements, t.width*t.height*sizeof(int), cudaMemcpyDeviceToHost);
+		t.recreateRegion(row, baseXrow, lX, 1);
+		t.recreateRegion(col, baseYcol, 1, lY);
+	}
+	deviceCopy.destroy();
+}
+
+/*
+	EN: Determines best from a row level POV.
+	ES: Determina el mejor movimiento desde un punto de vista de fila.
+*/
+void getBestMove(Table t, int* move, int* row, int* col)
+{
+	int bestXrow=0, bestYrow=0, bestRowLength=0;
+	int bestRowMove;
+
+	for(int i=0; i<t.height; i++)
+	{
+		int curLength = 0;
+		int curMove = LEFT;
+		for(int j=0; j<t.height-1; j++)
+		{
+			if(t.getElement(i, j) == t.getElement(i, j+1))
+				curLength++;
+			else if (i>0)
+				{
+					if(t.getElement(i, j) == t.getElement(i-1, j+1))
+				{
+					curLength++;
+					curMove = DOWN;
+					}
+			}
+			else if(i<t.height-1)
+			{
+				if(t.getElement(i,j) == t.getElement(i+1, j+1))
+				{
+					curLength++;
+					curMove = UP;
+				}
+			}
+			if(curMove == LEFT) curLength = 0;
+			else if(curLength > bestRowLength)
+			{
+				bestRowLength = curLength;
+				bestRowMove = curMove;
+				switch(bestRowMove)
+				{
+				case UP:
+					bestXrow = i-1;
+					bestYrow = j+1;
+					break;
+				case DOWN:
+					bestXrow = i+1;
+					bestYrow = j+1;
+					break;
+				}
+			}
+		}
+	}
+
+	*move = bestRowMove;
+	*row = bestYrow;
+	*col = bestXrow;
 }

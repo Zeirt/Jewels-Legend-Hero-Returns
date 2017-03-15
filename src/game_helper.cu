@@ -297,7 +297,7 @@ __device__ bool rotateDeviceBlock(int row, int col, Table table)
 	ES: Rota un subtablero de 3x3, centrado en (col, row). Primero, comprueba si la rotación es válida,
 	entonces determina qué punto está siendo manejado por el hilo actual y hace los cambios apropiados.
 */
-__device__ int rotateDeviceShared(int row, int col, Table table)
+__device__ bool rotateDeviceShared(int row, int col, Table table)
 {
 	int curRow = blockIdx.y*blockDim.y+threadIdx.y, curCol = blockIdx.x*blockDim.x+threadIdx.x;
 	int relPos = getRelativePosition(curRow, curCol, row, col);
@@ -332,4 +332,93 @@ __device__ int rotateDeviceShared(int row, int col, Table table)
 	__syncthreads();
 	table.setElementDevice(newVal, curRow, curCol);
 	return true;
+}
+
+/*
+	EN: Function in charge of erasing a set of elements in a row in CPU. It moves them up, 
+	effectively dragging everything above them down, and then randomizes that set of elements.
+	ES: Función encargada de eliminar un grupo de elementos dispuestos en forma de fila en CPU.
+	En primer lugar los desplaza ascendentemente, hacienedo bajar todo lo que haya sobre ellos,
+	y entonces genera valores aleatorios para sustituir los actuales.
+*/
+void eraseRow(int startRow, int startCol, int length, Table t)
+{
+	while(moveIsValid(startRow, startCol, moves_t.UP, t))
+	{
+		for(int i=0; i<length; i++)
+		{
+			move(startRow, startCol+i, moves_t.UP, t);
+		}
+	}
+	t.recreateRegion(startRow, startCol, length, 1);
+}
+
+/*
+	EN: Function in charge of erasing a set of elements in a column in CPU. It moves them left,
+	effectively dragging those in the positions they now occupy to the right, and then randomizes
+	that set of elements.
+	ES: Función encargada de eliminar un grupo de elementos dispuestos en forma de columna en CPU.
+	En primer lugar desplaza los elementos hacia la izquierda, efectivamente arrastrando los elementos
+	en las posiciones que ahora ocupan hacia la derecha, y entonces recrea esa región con valores aleatorios.
+*/
+void eraseCol(int startRow, int startCol, int length, Table t)
+{
+	while(moveIsValid(startRow, startCol, moves_t.LEFT, t))
+	{
+		for(int i=0; i<length; i++)
+		{
+			move(startRow+i, startCol, moves_t.LEFT, t);
+		}
+	}
+	t.recreateRegion(startRow, startCol, 1, length);
+}
+
+__device__ void eraseRowDevice(int startRow, int startCol, int length, Table t)
+{
+	int row = threadIdx.y, col = threadIdx.x;
+	if(row != startRow || col < startCol || col > startCol+length) __syncthreads();
+	else
+	{
+		while(moveIsValid(row, col, moves_t.UP, t))
+			move(row, col, moves_t.UP, t);
+		t.recreateRegion(row, col, 1, 1);
+		__syncthreads();
+	}
+}
+
+__device__ void eraseColDevice(int startRow, int startCol, int length, Table t)
+{
+	int row = threadIdx.y, col = threadIdx.x;
+	if(col != startCol || row < startRow || row > startRow+length) __syncthreads();
+	else
+	{
+		while(moveIsValid(row, col, moves_t.LEFT, t))
+			move(row, col, moves_t.LEFT, t);
+		t.recreateRegion(row, col, 1, 1);
+		__syncthreads();
+	}
+}
+
+/*
+	EN: Detects what rows and columns should be eliminated.
+*/
+int[] detectEliminationPattern(Table t, int row, int col)
+{
+	int count = 0;
+	int baseXrow = -1, baseYrow = -1, 
+	for(int i=0; i<t.width-1; i++)
+	{
+		if(t.getElement(row, i) == t.getElement(row, i+1) && t.getElement(row, i) == t.getElement(row, col))
+			count++;
+		else if(i>=col) break;
+		else count = 0;
+	}
+	count = 0;
+	for(int i=0; i<t.height-1; i++)
+	{
+		if(t.getElement(i, col) == t.getElement(i+1, col) && t.getElement(i, col) == t.getElement(row, col))
+			count++;
+		else if(i>=row) break;
+		else count = 0;
+	}
 }

@@ -343,11 +343,11 @@ __device__ bool rotateDeviceShared(int row, int col, Table table)
 */
 void eraseRow(int startRow, int startCol, int length, Table t)
 {
-	while(moveIsValid(startRow, startCol, moves_t.UP, t))
+	while(moveIsValid(startRow, startCol, UP, t))
 	{
 		for(int i=0; i<length; i++)
 		{
-			move(startRow, startCol+i, moves_t.UP, t);
+			move(startRow, startCol+i, UP, t);
 		}
 	}
 	t.recreateRegion(startRow, startCol, length, 1);
@@ -363,11 +363,11 @@ void eraseRow(int startRow, int startCol, int length, Table t)
 */
 void eraseCol(int startRow, int startCol, int length, Table t)
 {
-	while(moveIsValid(startRow, startCol, moves_t.LEFT, t))
+	while(moveIsValid(startRow, startCol, LEFT, t))
 	{
 		for(int i=0; i<length; i++)
 		{
-			move(startRow+i, startCol, moves_t.LEFT, t);
+			move(startRow+i, startCol, LEFT, t);
 		}
 	}
 	t.recreateRegion(startRow, startCol, 1, length);
@@ -379,9 +379,8 @@ __device__ void eraseRowDevice(int startRow, int startCol, int length, Table t)
 	if(row != startRow || col < startCol || col > startCol+length) __syncthreads();
 	else
 	{
-		while(moveIsValid(row, col, moves_t.UP, t))
-			move(row, col, moves_t.UP, t);
-		t.recreateRegion(row, col, 1, 1);
+		while(deviceMoveIsValid(row, col, UP, t))
+			deviceMove(row, col, UP, t);
 		__syncthreads();
 	}
 }
@@ -392,9 +391,8 @@ __device__ void eraseColDevice(int startRow, int startCol, int length, Table t)
 	if(col != startCol || row < startRow || row > startRow+length) __syncthreads();
 	else
 	{
-		while(moveIsValid(row, col, moves_t.LEFT, t))
-			move(row, col, moves_t.LEFT, t);
-		t.recreateRegion(row, col, 1, 1);
+		while(deviceMoveIsValid(row, col, LEFT, t))
+			deviceMove(row, col, LEFT, t);
 		__syncthreads();
 	}
 }
@@ -402,23 +400,55 @@ __device__ void eraseColDevice(int startRow, int startCol, int length, Table t)
 /*
 	EN: Detects what rows and columns should be eliminated.
 */
-int[] detectEliminationPattern(Table t, int row, int col)
+void detectEliminationPattern(Table t, int row, int col, int storage[6])
 {
 	int count = 0;
-	int baseXrow = -1, baseYrow = -1, 
 	for(int i=0; i<t.width-1; i++)
 	{
 		if(t.getElement(row, i) == t.getElement(row, i+1) && t.getElement(row, i) == t.getElement(row, col))
-			count++;
+			{
+				count++;
+				if(count == 0){
+					storage[0] = row;
+					storage[1] = i;
+				}
+		}
 		else if(i>=col) break;
 		else count = 0;
 	}
+	storage[2] = count;
 	count = 0;
 	for(int i=0; i<t.height-1; i++)
 	{
 		if(t.getElement(i, col) == t.getElement(i+1, col) && t.getElement(i, col) == t.getElement(row, col))
-			count++;
+			{
+				count++;
+				if(count == 0){
+					storage[3] = i;
+					storage[4] = col;
+				}
+		}
 		else if(i>=row) break;
 		else count = 0;
 	}
+	storage[5] = count;
+}
+
+__device__ void detectEliminationPatternDevice(Table t, int lengths[2])
+{
+	int count = 0;
+	int row = threadIdx.y, col = threadIdx.x;
+	for(int i=col; i<t.width-1; i++)
+	{
+		if(t.getElement(row, i) != t.getElement(row, i+1)) break;
+		count++;
+	}
+	lengths[0] = count;
+	count = 0;
+	for(int i=row; i<t.height-1; i++)
+	{
+		if(t.getElement(i, col) != t.getElement(i+1, col)) break;
+		count++;
+	}
+	lengths[1] = count;
 }

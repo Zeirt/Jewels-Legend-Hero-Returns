@@ -21,5 +21,17 @@ bool moveIsValid(int, int, moves_t, Table);
 __device__ bool deviceMoveIsValid(int, int, moves_t, Table); 
 bool move(int, int, moves_t, Table);
 __device__ bool deviceMove(int, int, moves_t, Table);
+bool rotationIsValid(int row, int col, Table table);
+bool rotate(int row, int col, Table table);
+__device__ int getRelativePosition(int curRow, int curCol, int row, int col);
+__device__ bool rotateDeviceGlobal(int row, int col, Table table);
+__device__ bool rotateDeviceBlock(int row, int col, Table table);
+__device__ bool rotateDeviceShared(int row, int col, Table table);
+void eraseRow(int startRow, int startCol, int length, Table t);
+void eraseCol(int startRow, int startCol, int length, Table t);
+__device__ void eraseRowDevice(int startRow, int startCol, int length, Table t);
+__device__ void eraseColDevice(int startRow, int startCol, int length, Table t);
+void detectEliminationPattern(Table t, int row, int col, int storage[6]);
+__device__ void detectEliminationPatternDevice(Table t);
 
 #endif
